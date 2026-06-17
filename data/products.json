@@ -1,0 +1,22 @@
+{
+  "productLines": [
+    {
+      "id": "cable",
+      "name": "电缆及电缆组件",
+      "materials": [{ "id": "copper", "name": "铜价" }, { "id": "pvc", "name": "PVC护套料" }],
+      "peers": ["立讯精密", "亨通光电"]
+    },
+    {
+      "id": "connector",
+      "name": "连接器及连接系统",
+      "materials": [{ "id": "copper", "name": "铜价" }, { "id": "gold", "name": "镀金" }],
+      "peers": ["立讯精密", "中航光电"]
+    },
+    {
+      "id": "pcb",
+      "name": "PCB 印制电路板",
+      "materials": [{ "id": "ccl", "name": "覆铜板CCL" }, { "id": "gold", "name": "金价" }],
+      "peers": ["鹏鼎控股", "生益科技"]
+    }
+  ]
+}

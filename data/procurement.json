@@ -1,0 +1,20 @@
+{
+  "periods": ["2025-Q3", "2025-Q4", "2026-Q1", "2026-Q2"],
+  "records": [
+    {
+      "productLine": "connector", "sku": "高速背板连接器", "supplier": "供应商A",
+      "unitPrice": [11.0, 11.2, 11.2, 12.8], "qty": [10000, 10200, 9800, 10000],
+      "freq": [4, 4, 4, 4], "supplierShare": [0.5, 0.5, 0.5, 0.6], "amount": 12800000
+    },
+    {
+      "productLine": "pcb", "sku": "高频高速板", "supplier": "供应商B",
+      "unitPrice": [100, 101, 102, 104], "qty": [5000, 5200, 5300, 5400],
+      "freq": [3, 3, 3, 3], "supplierShare": [0.7, 0.75, 0.8, 0.82], "amount": 5616000
+    },
+    {
+      "productLine": "cable", "sku": "射频同轴电缆", "supplier": "供应商C",
+      "unitPrice": [98, 99, 100, 101], "qty": [20000, 20500, 21000, 21000],
+      "freq": [5, 5, 5, 5], "supplierShare": [0.4, 0.4, 0.4, 0.4], "amount": 2121000
+    }
+  ]
+}
