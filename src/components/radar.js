@@ -57,7 +57,10 @@ export function renderRadar(el, ctx) {
     </div>` : ""}`;
 
   if (a) {
-    const chart = echarts.init(document.getElementById("radar-band"), "dark");
+    const bandEl = document.getElementById("radar-band");
+    const existing = echarts.getInstanceByDom(bandEl);
+    if (existing) existing.dispose();
+    const chart = echarts.init(bandEl, "dark");
     chart.setOption({
       backgroundColor: "transparent",
       tooltip: { trigger: "axis" },

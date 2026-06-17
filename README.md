@@ -14,5 +14,10 @@ python -m http.server 8000
 npm test
 ```
 
+## 实时行情抓取
+`node scripts/fetch-market.mjs` 抓沪铜/沪铝（新浪期货）写 `data/live-market.json`；
+GitHub Actions（.github/workflows/daily-fetch.yml）每日自动跑并提交，Pages 自动刷新。
+CCL/PCB/成交价为示例数据（角标标注），真实成交价待 ccgp/Dify 接入。
+
 ## 数据口径
 横向=公开行情快照，纵向=拟真合成。接入 ERP 即实时运行。
