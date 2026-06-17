@@ -6,11 +6,12 @@ import { renderComparison } from "./components/comparison.js";
 import { renderAlerts } from "./components/alerts.js";
 import { renderInsights } from "./components/insights.js";
 import { exportReport } from "./components/report.js";
+import { renderRadar } from "./components/radar.js";
 
 // 切换真实接口时，仅改这一行为 new ApiDataProvider(baseUrl)
 const provider = new JsonDataProvider();
 
-const state = { products: null, market: null, procurement: null, insights: null, current: "cable", anomalies: [], llm: null };
+const state = { products: null, market: null, procurement: null, insights: null, current: "cable", anomalies: [], llm: null, liveMarket: null, benchmark: null };
 
 function renderSwitch() {
   const el = document.getElementById("product-switch");
@@ -36,9 +37,12 @@ function renderAll() {
     procurement: state.procurement,
     anomalies: state.anomalies.filter((a) => a.productLine === state.current),
     allAnomalies: state.anomalies,
-    llm: state.llm
+    llm: state.llm,
+    liveMarket: state.liveMarket,
+    benchmark: state.benchmark
   };
   renderDashboard(document.getElementById("dashboard"), ctx);
+  renderRadar(document.getElementById("radar"), ctx);
   renderComparison(document.getElementById("comparison"), ctx);
   renderAlerts(document.getElementById("alerts"), ctx);
   renderInsights(document.getElementById("insights"), ctx);
@@ -60,6 +64,14 @@ async function main() {
   state.insights = insights;
   state.anomalies = detectAnomalies(procurement.records, market, productLines, DEFAULT_CONFIG);
   state.llm = createLlmClient(insights);
+
+  const [liveMarket, benchmark] = await Promise.all([
+    fetch("data/live-market.json").then((r) => r.ok ? r.json() : null).catch(() => null),
+    fetch("data/benchmark.json").then((r) => r.ok ? r.json() : null).catch(() => null)
+  ]);
+  state.liveMarket = liveMarket;
+  state.benchmark = benchmark;
+
   renderAll();
 }
 
