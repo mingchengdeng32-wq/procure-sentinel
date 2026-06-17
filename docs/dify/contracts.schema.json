@@ -1,0 +1,182 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProcureSentinel × Dify 数据契约",
+  "description": "采购智能体与 Dify 之间的输入/输出契约。前端 insights.json 是最终消费目标，必须严格匹配。",
+
+  "definitions": {
+
+    "AnomalyInput": {
+      "description": "App1 诊断工作流的输入。由 procure-sentinel 规则引擎产出，作为 inputs.anomaly_json 传入（JSON 字符串）。AI 不得重算这些数字。",
+      "type": "object",
+      "required": ["key", "sku", "supplier", "product_line", "risk_level", "metrics", "triggered_rules", "material_name"],
+      "properties": {
+        "key": { "type": "string", "description": "唯一键 productLine::sku::supplier", "examples": ["connector::高速背板连接器::供应商A"] },
+        "sku": { "type": "string", "examples": ["高速背板连接器"] },
+        "supplier": { "type": "string", "examples": ["供应商A"] },
+        "product_line": { "type": "string", "enum": ["cable", "connector", "pcb"] },
+        "risk_level": { "type": "string", "enum": ["high", "mid", "low"], "description": "由规则引擎判定，AI 不得修改" },
+        "material_name": { "type": "string", "examples": ["铜", "覆铜板CCL", "金"] },
+        "triggered_rules": { "type": "array", "items": { "type": "string", "enum": ["环比异动", "成本背离", "同行偏离", "供应商集中度"] } },
+        "metrics": {
+          "type": "object",
+          "required": ["price", "price_pct", "material_pct", "divergence", "peer_dev", "concentration"],
+          "properties": {
+            "price": { "type": "number", "description": "本期单价" },
+            "price_pct": { "type": "number", "description": "单价环比(小数,0.143=+14.3%)" },
+            "material_pct": { "type": "number", "description": "原材料环比(小数)" },
+            "divergence": { "type": "number", "description": "price_pct - material_pct" },
+            "peer_dev": { "type": "number", "description": "相对同行均价偏离(小数)" },
+            "concentration": { "type": "number", "description": "供应商集中度(0~1)" }
+          }
+        }
+      }
+    },
+
+    "DiagnosisOutput": {
+      "description": "App1 诊断工作流的输出。映射进 insights.anomalyCards[key] 的 AI 字段。",
+      "type": "object",
+      "required": ["conclusion", "attribution", "suggestions", "notify", "confidence"],
+      "properties": {
+        "conclusion": { "type": "string", "description": "结论先行，引用输入里的关键数字，不自造数字" },
+        "attribution": { "type": "string", "description": "根因分析" },
+        "suggestions": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "type": "string" } },
+        "notify": { "type": "array", "items": { "type": "string", "enum": ["采购部负责人", "分管副总", "供应链风控", "财务"] } },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1, "description": "AI 对该诊断的确信度" }
+      }
+    },
+
+    "InsightSummaryInput": {
+      "description": "App2 经营洞察工作流的输入。inputs.summary_json（JSON 字符串）。",
+      "type": "object",
+      "required": ["anomalies", "product_lines"],
+      "properties": {
+        "anomalies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sku": { "type": "string" }, "supplier": { "type": "string" },
+              "product_line": { "type": "string" }, "risk_level": { "type": "string" },
+              "triggered_rules": { "type": "array", "items": { "type": "string" } },
+              "divergence": { "type": "number" }, "concentration": { "type": "number" }
+            }
+          }
+        },
+        "product_lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" }, "name": { "type": "string" },
+              "total_amount": { "type": "number" }, "anomaly_count": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+
+    "InsightSummaryOutput": {
+      "description": "App2 输出。映射进 insights.presetAnswers 与 insights.execActions。",
+      "type": "object",
+      "required": ["biggestRisk", "costPressure", "savingOpp", "execActions"],
+      "properties": {
+        "biggestRisk": { "type": "string", "description": "本季度最大风险，结论先行，≤200字" },
+        "costPressure": { "type": "string", "description": "哪条产品线成本压力最大，≤200字" },
+        "savingOpp": { "type": "string", "description": "降本机会，≤200字" },
+        "execActions": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "string" }, "description": "给管理层的3条行动建议，每条含动作+理由+预期收益" }
+      }
+    },
+
+    "CorrelationInput": {
+      "description": "App3 关联分析工作流的输入。特征由 procure-sentinel 先算好（AI 只叙述，不计算）。inputs.features_json。",
+      "type": "object",
+      "required": ["by_supplier"],
+      "properties": {
+        "by_supplier": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "supplier": { "type": "string" }, "product_line": { "type": "string" },
+              "price_material_corr": { "type": "number", "description": "报价与材料价相关系数(-1~1)，我方算" },
+              "concentration_trend": { "type": "string", "enum": ["上升", "持平", "下降"] },
+              "premium_vs_peer": { "type": "number", "description": "相对同行溢价(小数)" },
+              "price_trend": { "type": "string", "examples": ["逆势上涨", "随行就市"] },
+              "buyer": { "type": ["string", "null"], "description": "经手采购员，待真实数据，可为 null" }
+            }
+          }
+        },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "CorrelationOutput": {
+      "description": "App3 输出。映射进 insights.correlation。",
+      "type": "object",
+      "required": ["findings", "summary"],
+      "properties": {
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["title", "detail", "severity"],
+            "properties": {
+              "title": { "type": "string" },
+              "detail": { "type": "string" },
+              "severity": { "type": "string", "enum": ["high", "mid", "low"] },
+              "lead": { "type": "string", "description": "议价漏洞/处置线索" }
+            }
+          }
+        },
+        "summary": { "type": "string" }
+      }
+    },
+
+    "InsightsFile": {
+      "description": "最终 data/insights.json 结构。前端 llmClient 直接消费，必须严格匹配。dify-generate.mjs 组装成此结构。",
+      "type": "object",
+      "required": ["anomalyCards", "presetAnswers", "execActions"],
+      "properties": {
+        "_aiGenerated": { "type": "boolean", "description": "整体是否由 AI 生成；true 时前端可显示 ✨ 角标" },
+        "_generatedAt": { "type": "string", "format": "date-time" },
+        "_model": { "type": "string", "examples": ["dify:采购诊断工作流"] },
+        "anomalyCards": {
+          "type": "object",
+          "description": "key=productLine::sku::supplier。riskLevel/title 由 procure-sentinel 填，其余由 App1 填。",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["riskLevel", "title", "conclusion", "attribution", "suggestions", "notify"],
+            "properties": {
+              "riskLevel": { "type": "string", "enum": ["high", "mid", "low"] },
+              "title": { "type": "string" },
+              "conclusion": { "type": "string" },
+              "attribution": { "type": "string" },
+              "suggestions": { "type": "array", "items": { "type": "string" } },
+              "notify": { "type": "array", "items": { "type": "string" } },
+              "confidence": { "type": "number" },
+              "aiGenerated": { "type": "boolean" }
+            }
+          }
+        },
+        "presetAnswers": {
+          "type": "object",
+          "required": ["biggestRisk", "costPressure", "savingOpp"],
+          "properties": {
+            "biggestRisk": { "type": "string" },
+            "costPressure": { "type": "string" },
+            "savingOpp": { "type": "string" }
+          }
+        },
+        "execActions": { "type": "array", "items": { "type": "string" } },
+        "correlation": {
+          "type": "object",
+          "description": "可选，App3 产出，用于 ⑨ 关联分析区",
+          "properties": {
+            "findings": { "type": "array", "items": { "type": "object" } },
+            "summary": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
