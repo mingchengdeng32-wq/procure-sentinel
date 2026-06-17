@@ -39,3 +39,17 @@ test("供应商集中度超阈值触发规则", () => {
   const out = detectAnomalies(recs, mkt, products, DEFAULT_CONFIG);
   assert.ok(out[0].triggeredRules.includes("供应商集中度"));
 });
+
+test("仅集中度触发且负背离时为中风险，不被绝对值误判为高", () => {
+  // 采购价仅 +1%，材料(ccl)大涨 +18%，背离为负=成本控制良好，不应升级为 high
+  const recs = [{
+    productLine: "pcb", sku: "板", supplier: "供应商B",
+    unitPrice: [100, 101, 102, 103], qty: [1, 1, 1, 1],
+    freq: [3, 3, 3, 3], supplierShare: [0.7, 0.75, 0.8, 0.82], amount: 1
+  }];
+  const products = [{ id: "pcb", name: "PCB", materials: [{ id: "ccl" }] }];
+  const mkt = { ...market, materials: { ...market.materials, ccl: [100, 105, 118, 140] }, peerAvgPrice: { pcb: [100, 101, 102, 103] } };
+  const out = detectAnomalies(recs, mkt, products, DEFAULT_CONFIG);
+  assert.ok(out[0].metrics.divergence < 0);
+  assert.equal(out[0].riskLevel, "mid");
+});

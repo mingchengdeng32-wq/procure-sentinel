@@ -19,7 +19,8 @@ function materialPct(productLine, market, products) {
 function classify(triggeredRules, metrics) {
   const strong = triggeredRules.includes("成本背离") || triggeredRules.includes("同行偏离");
   if (triggeredRules.length >= 2 && strong) return "high";
-  if (Math.abs(metrics.divergence) > 0.10) return "high";
+  // 仅正向背离（采购价涨幅远超材料）算高风险；负背离表示成本控制良好，不升级
+  if (metrics.divergence > 0.10) return "high";
   if (triggeredRules.length >= 1) return "mid";
   return "low";
 }
