@@ -1,0 +1,35 @@
+:root {
+  --bg-0: #0a0e1a;          /* 最底背景 */
+  --bg-1: #111729;          /* 卡片表面 */
+  --bg-2: #1a2238;          /* 抬升表面 */
+  --line: #243049;          /* 分隔线 */
+  --text-0: #e8edf7;        /* 主文字 */
+  --text-1: #9aa7c0;        /* 次文字 */
+  --accent: #3b82f6;        /* 科技蓝主色 */
+  --accent-glow: #60a5fa;
+  --risk-high: #ef4444;     /* 警示红 */
+  --risk-mid: #f59e0b;      /* 琥珀黄 */
+  --risk-low: #22c55e;      /* 正常绿 */
+  --num: "Oswald", "DIN", sans-serif;
+
+  --space-section: clamp(3rem, 2rem + 4vw, 6rem);
+  --radius: 14px;
+  --shadow-card: 0 8px 30px rgba(0,0,0,.35);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(59,130,246,.12), transparent),
+    var(--bg-0);
+  color: var(--text-0);
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+.card {
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+.big-num { font-family: var(--num); font-weight: 700; letter-spacing: .5px; }
