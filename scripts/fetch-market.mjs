@@ -7,15 +7,15 @@ const SOURCES = [
   { id: "aluminum", name: "沪铝", code: "nf_AL0", seeded: 20000 }
 ];
 
-// 从新浪返回文本中提取昨结算价（index=1）或开盘价（index=2）
-// 新浪期货串格式：name,昨结算,开盘,最高,最低,最新,…
-// 取 index=2（开盘价）作为当日行情基准价；若为 0 则取 index=1（昨结算）
+// 新浪期货串字段：0=名称,1=非价格常量(150000),2=开盘,3=最高,4=最低,
+// 5=结算/收盘,6=买价,7=卖价,8=最新价,…
+// 优先取 8(最新价)，回落 5(收盘)/2(开盘)；这三者均为真实价格字段，
+// 刻意不取 index=1（那是个 150000 的非价格常量，会污染结果）。
 function parsePrice(text) {
   const m = text.match(/="([^"]+)"/);
   if (!m) return null;
   const raw = m[1].split(",");
-  // index 1=昨结算, 2=开盘, 5=最新成交价
-  for (const idx of [5, 2, 1]) {
+  for (const idx of [8, 5, 2]) {
     const n = Number(raw[idx]);
     if (Number.isFinite(n) && n > 1000) return n;
   }
