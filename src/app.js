@@ -5,6 +5,7 @@ import { renderDashboard } from "./components/dashboard.js";
 import { renderComparison } from "./components/comparison.js";
 import { renderAlerts } from "./components/alerts.js";
 import { renderInsights } from "./components/insights.js";
+import { exportReport } from "./components/report.js";
 
 // 切换真实接口时，仅改这一行为 new ApiDataProvider(baseUrl)
 const provider = new JsonDataProvider();
@@ -41,6 +42,9 @@ function renderAll() {
   renderComparison(document.getElementById("comparison"), ctx);
   renderAlerts(document.getElementById("alerts"), ctx);
   renderInsights(document.getElementById("insights"), ctx);
+  document.getElementById("export-btn").onclick = () => exportReport({
+    allAnomalies: state.anomalies, llm: state.llm
+  });
 }
 
 async function main() {
