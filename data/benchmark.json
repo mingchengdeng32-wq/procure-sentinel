@@ -1,0 +1,9 @@
+{
+  "_seeded": true,
+  "_note": "CCL/PCB 等无稳定免费接口，此为示例锚点；真实成交价待 ccgp/Dify AI 节点接入",
+  "categories": {
+    "cable": { "marketAvgPrice": 99, "unit": "指数" },
+    "connector": { "marketAvgPrice": 11.4, "unit": "元" },
+    "pcb": { "marketAvgPrice": 102, "unit": "指数" }
+  }
+}
