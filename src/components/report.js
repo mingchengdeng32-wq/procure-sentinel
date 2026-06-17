@@ -1,5 +1,3 @@
-import { wan, signedPct } from "../lib/format.js";
-
 function buildBody(ctx) {
   const cards = ctx.allAnomalies.map((a) => {
     const c = ctx.llm.getAnomalyCard(a);

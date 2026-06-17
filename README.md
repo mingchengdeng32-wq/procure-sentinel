@@ -3,7 +3,7 @@
 管理层采购决策驾驶舱 Demo（Stage1）。纯前端，无后端。
 
 ## 运行
-需用本地服务器打开（fetch 加载 JSON）：
+**必须用本地服务器打开，切勿直接双击 `index.html`**（`file://` 下浏览器会拦截 JSON 加载导致白屏）：
 ```bash
 python -m http.server 8000
 # 访问 http://localhost:8000/
