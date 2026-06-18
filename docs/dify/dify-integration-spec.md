@@ -2,7 +2,9 @@
 
 > 日期：2026-06-17 · 适用：本地自托管 Dify
 > 目标：让另一个 agent 照此**在 Dify 里建好 App + 把真 AI 接进采购智能体前端**，零改动对接现有 `data/insights.json` 契约。
-> 配套：数据契约见同目录 `contracts.schema.json`。
+> 配套：数据契约 `contracts.schema.json`；**App1 已真机部署实测**，其权威对接细节见 `app1-integration-guide.md`、工作流导出见 `app1_diagnosis.yml`。
+>
+> **进度**：✅ App1 采购诊断（已部署实测） · ⬜ App2 经营洞察（待建） · ⬜ App3 关联分析（待建） · ⬜ App4 对话（选做）。
 
 ---
 
@@ -70,10 +72,11 @@ procure-sentinel（前端/脚本）                Dify（本地自托管）
 
 ---
 
-## 3. App1 · 采购诊断工作流（Workflow）
+## 3. App1 · 采购诊断工作流（Workflow） ✅ 已部署实测
 
 **应用类型**：工作流（Workflow）
 **用途**：输入一条异常，输出诊断+建议+置信度。
+**状态**：已在本地 Dify 部署、真机实测通过；工作流导出见 `app1_diagnosis.yml`，可直接导入复现。对接细节以 `app1-integration-guide.md` 为权威，本节为总体说明。
 
 ### 3.1 节点编排
 ```
@@ -259,14 +262,18 @@ def main(llm_text: str) -> dict:
 每个 App 在 Dify 后台「访问 API」处获取独立 API Key（形如 `app-xxxxxxxx`）。
 
 ### 7.1 Workflow 应用（App1/2/3）
+
+> ⚠️ **实测修正（来自 App1 真机部署）**：`DIFY_BASE_URL` 已**包含 `/v1` 前缀**，实测值 `http://localhost/v1`。因此 endpoint 是 `{DIFY_BASE_URL}/workflows/run`，**不要再拼 `/v1`**（否则变成双 `/v1` 404）。
+> `inputs` 的值是 **JSON 字符串**（开始节点变量为 paragraph/段落型）——传之前对对象 `JSON.stringify()`。
+
 ```
-POST  {DIFY_BASE_URL}/v1/workflows/run
+POST  {DIFY_BASE_URL}/workflows/run      # DIFY_BASE_URL 例：http://localhost/v1
 Headers:
   Authorization: Bearer {APP_API_KEY}
   Content-Type: application/json
 Body:
   {
-    "inputs": { "anomaly_json": "{...JSON字符串...}" },
+    "inputs": { "anomaly_json": "{...JSON字符串(stringify后)...}" },
     "response_mode": "blocking",
     "user": "procure-sentinel"
   }
@@ -276,7 +283,7 @@ Body:
                            "suggestions": [...], "notify": [...], "confidence": 0.86 } } }
 ```
 > `inputs` 的键名 = 各 App「开始」节点定义的变量名（App1=`anomaly_json`，App2=`summary_json`，App3=`features_json`）。
-> `DIFY_BASE_URL` 例：`http://192.168.x.x`（你本地 Dify 地址，注意是否带端口；API 前缀固定 `/v1`）。
+> 单次耗时实测 5~9s；如需提速对多条异常做有限并发（并发度 ≤ 3，避免本地 LLM 过载）。
 
 ### 7.2 Chatflow 应用（App4）
 ```
@@ -305,21 +312,32 @@ DIFY_APP3_KEY=app-...   # 关联分析
 import { readFileSync, writeFileSync } from "node:fs";
 import { detectAnomalies, DEFAULT_CONFIG } from "../src/lib/ruleEngine.js";
 
-const BASE = process.env.DIFY_BASE_URL;
+const BASE = process.env.DIFY_BASE_URL;     // 已含 /v1，例 http://localhost/v1
 async function runWorkflow(key, inputs) {
-  const res = await fetch(`${BASE}/v1/workflows/run`, {
+  const res = await fetch(`${BASE}/workflows/run`, {   // 注意：BASE 已含 /v1，不再拼
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ inputs, response_mode: "blocking", user: "procure-sentinel" })
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const j = await res.json();
-  if (j?.data?.status !== "succeeded") throw new Error("dify 调用失败: " + JSON.stringify(j));
-  return j.data.outputs;
+  return j?.data ?? {};   // 返回整个 data，由调用方按各 App 的“有效性守卫”判定
 }
-// 1) 异常 → App1；2) 汇总 → App2；3) 特征 → App3；4) 组装 insights.json（含 riskLevel/title 由本地填）
-// 失败兜底：任一异常调用失败，回退该卡为规则兜底文案并标 aiGenerated:false，不中断整体。
+// 1) 异常 → App1（inputs:{anomaly_json: JSON.stringify(anomaly)}）；2) 汇总 → App2；3) 特征 → App3
+// 4) 组装 insights.json（riskLevel/title 由本地填，AI 字段来自 outputs，并打 aiGenerated 标）
 ```
-> **兜底纪律**：任何 Dify 调用失败都不得让 demo 崩——失败的卡回退为规则引擎兜底文案（现 `llmClient` 已有兜底逻辑），整体仍产出可用 insights.json。
+
+> **⚠️ 实测铁律：`data.status==="succeeded"` 不等于诊断有效。** 输入非法或 LLM 输出无法解析时，Code 节点会兜底返回**空字段 + `confidence:0.7`**，状态仍是 succeeded。直接采信会渲染“空诊断卡 + 70%置信度”的误导结果。
+>
+> **有效性守卫（每条 App1 结果必须过）：**
+> ```
+> 有效 ⟺ data.status==="succeeded"
+>        && typeof outputs.conclusion==="string" && outputs.conclusion.trim()!==""
+>        && Array.isArray(outputs.suggestions) && outputs.suggestions.length>=1
+> ```
+> 任一不满足 → 视为 AI 失败，**该卡回退规则引擎兜底文案并标 `aiGenerated:false`**，且**忽略那个 0.7 的 confidence**。单条失败**绝不中断整批**。兜底沿用 `llmClient` 现有规则兜底逻辑，保证 `insights.json` 始终可用、demo 不崩。
+>
+> 📌 App1 的字段级契约、实测样例、守卫细节以 **`app1-integration-guide.md`（已真机实测）为权威**，本节与其保持一致。
 
 ### 8.2 挂进 GitHub Action（扩展现有 `.github/workflows/daily-fetch.yml`）
 在抓行情之后加一步（仅当配置了 Secrets 时运行）：
@@ -349,11 +367,11 @@ async function runWorkflow(key, inputs) {
 
 ## 9. 落地顺序（给搭建 agent）
 
-1. 在 Dify 建 **App1 诊断工作流**（§3），用一条样例 `anomaly_json` 测试 `/v1/workflows/run` 返回符合 `DiagnosisOutput`。
-2. 建 **App2**（§4）、**App3**（§5），同样用样例测通。
-3. procure-sentinel 侧加 `scripts/dify-generate.mjs`（§8.1）+ 改 `llmClient`（§8.3）+ 前端角标（§8.4）。
-4. 配 Secrets/`.env`，跑一次 `node scripts/dify-generate.mjs`，确认生成的 `data/insights.json` 符合 §2.1 且前端正常渲染。
-5. （选做）建 **App4 对话** + 轻量代理。
+1. ✅ **App1 诊断工作流已建成实测**（§3，`app1_diagnosis.yml`/`app1-integration-guide.md`）。
+2. ⬜ 建 **App2**（§4）、**App3**（§5），用 `contracts.schema.json` 的样例测通；endpoint 同 App1：`{DIFY_BASE_URL}/workflows/run`（BASE 已含 /v1）。
+3. ⬜ procure-sentinel 侧加 `scripts/dify-generate.mjs`（§8.1，**含 App1 有效性守卫**）+ 改 `llmClient`（§8.3）+ 前端角标（§8.4）。
+4. ⬜ 配 Secrets/`.env`，跑一次 `node scripts/dify-generate.mjs`，确认生成的 `data/insights.json` 符合 §2.1 且前端正常渲染。
+5. ⬜（选做）建 **App4 对话** + 轻量代理。
 
 ## 10. 验收清单
 - [ ] App1/2/3 各用样例输入调通，输出严格匹配 `contracts.schema.json` 对应 Output。
