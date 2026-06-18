@@ -32,6 +32,25 @@ export function renderRadar(el, ctx) {
   }).join("");
 
   const meta = a ? VERDICT_META[a.verdict] : null;
+
+  // ⑨ 关联分析：有 App3 真实结果则渲染，否则保持占位预告
+  const corr = ctx.llm?.getCorrelation?.();
+  const sevColor = (s) => s === "high" ? "var(--risk-high)" : s === "mid" ? "var(--risk-mid)" : "var(--risk-low)";
+  const corrHtml = corr && corr.findings?.length
+    ? `<div class="card p-4 mt-4">
+        <div class="text-sm mb-2" style="color:var(--text-1)">🔗 采购关系 × 行为 × 报价 关联分析
+          <span class="text-xs px-2 py-0.5 rounded ml-2" style="background:var(--accent)22;color:var(--accent-glow)">✨AI关联</span></div>
+        ${corr.findings.map((f) => `<div class="mb-2" style="border-left:3px solid ${sevColor(f.severity)};padding-left:8px">
+          <div class="text-sm" style="color:var(--text-0)">${f.title}</div>
+          <div class="text-xs" style="color:var(--text-1)">${f.detail}${f.lead ? ` · 线索：${f.lead}` : ""}</div>
+        </div>`).join("")}
+        ${corr.summary ? `<div class="text-xs mt-1" style="color:var(--accent-glow)">${corr.summary}</div>` : ""}
+      </div>`
+    : `<div class="card p-4 mt-4" style="border:1px dashed var(--line)">
+        <div class="text-sm" style="color:var(--text-1)">🔗 采购关系 × 行为 × 报价 关联分析</div>
+        <div class="text-xs mt-1" style="color:var(--text-1)">接入真实采购/供应商/采购员数据后启用，可识别"系统性偏高报价"等议价漏洞线索。</div>
+      </div>`;
+
   el.innerHTML = `
     <h2 class="big-num text-lg mb-4" style="color:var(--text-1)">市场报价雷达 · AI 报价合理性</h2>
     <div class="card p-4 mb-4 flex items-center justify-between flex-wrap gap-2">
@@ -51,10 +70,7 @@ export function renderRadar(el, ctx) {
         <div class="text-sm mt-2" style="color:${meta.color}">${meta.tip}</div>
       </div>
     </div>
-    <div class="card p-4 mt-4" style="border:1px dashed var(--line)">
-      <div class="text-sm" style="color:var(--text-1)">🔗 采购关系 × 行为 × 报价 关联分析</div>
-      <div class="text-xs mt-1" style="color:var(--text-1)">接入真实采购/供应商/采购员数据后启用，可识别"系统性偏高报价"等议价漏洞线索。</div>
-    </div>` : ""}`;
+    ${corrHtml}` : ""}`;
 
   if (a) {
     const bandEl = document.getElementById("radar-band");

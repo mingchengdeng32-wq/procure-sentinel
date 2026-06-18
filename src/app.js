@@ -30,6 +30,12 @@ function renderSwitch() {
 
 function renderAll() {
   renderSwitch();
+  const banner = document.getElementById("ai-banner");
+  if (banner) {
+    banner.innerHTML = state.llm?.isAiGenerated?.()
+      ? `<span class="px-2 py-0.5 rounded" style="background:var(--accent)22;color:var(--accent-glow)">✨ AI 增持已启用 · ${state.llm.aiModel()}</span>`
+      : "";
+  }
   const ctx = {
     productLine: state.current,
     products: state.products.productLines,

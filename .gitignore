@@ -1,3 +1,5 @@
 .shots/
 
 .playwright-mcp/
+.env
+.env.local

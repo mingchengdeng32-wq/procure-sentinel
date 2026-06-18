@@ -10,9 +10,13 @@ function card(anomaly, llm) {
   const c = llm.getAnomalyCard(anomaly);
   const meta = RISK_META[c.riskLevel] || RISK_META.mid;
   const m = anomaly.metrics;
+  const conf = typeof c.confidence === "number" ? ` 置信度${Math.round(c.confidence * 100)}%` : "";
+  const aiBadge = c.aiGenerated
+    ? `<span class="text-xs px-2 py-0.5 rounded ml-2" style="background:var(--accent)22;color:var(--accent-glow)">✨AI诊断${conf}</span>`
+    : "";
   return `<div class="card p-5" style="border-left:4px solid ${meta.color}">
     <div class="flex items-center justify-between mb-2">
-      <span class="font-semibold">${meta.dot} ${c.title}</span>
+      <span class="font-semibold">${meta.dot} ${c.title}${aiBadge}</span>
       <span class="text-xs px-2 py-1 rounded" style="background:${meta.color}22;color:${meta.color}">${meta.label}</span>
     </div>
     <div class="text-xs mb-2" style="color:var(--text-1)">

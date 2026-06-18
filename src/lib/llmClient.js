@@ -13,7 +13,8 @@ export function createLlmClient(insights) {
         conclusion: `命中规则：${anomaly.triggeredRules.join("、")}，需关注。`,
         attribution: "由规则引擎判定，待 LLM 接入后生成归因。",
         suggestions: ["复盘报价", "询比价", "评估替代供应商"],
-        notify: ["采购部负责人"]
+        notify: ["采购部负责人"],
+        aiGenerated: false
       };
     },
     getPresetAnswer(id) {
@@ -21,6 +22,17 @@ export function createLlmClient(insights) {
     },
     getExecActions() {
       return insights.execActions ?? [];
+    },
+    // App3 关联分析结果（无则 null）
+    getCorrelation() {
+      return insights.correlation ?? null;
+    },
+    // 整体是否由真 AI 生成，用于顶栏「AI 增持」标识
+    isAiGenerated() {
+      return insights._aiGenerated === true;
+    },
+    aiModel() {
+      return insights._model ?? "";
     }
   };
 }
