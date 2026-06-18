@@ -1,0 +1,291 @@
+# ===================================================================
+# App1 · 采购诊断工作流（Workflow）
+# 规格来源：dify-integration-spec.md §3 / 契约：contracts.schema.json#AnomalyInput / #DiagnosisOutput
+# -------------------------------------------------------------------
+# 链路：开始 → LLM诊断 → 解析JSON → 结束（最小链路，无知识库）
+#
+# 【重要】节点 id 必须是“纯数字字符串”，不能含连字符 '-'。
+#   Dify 的 prompt 变量替换正则不认 id 里的 '-'，否则 {{#id.var#}} 不会被替换，
+#   LLM 会收到字面文本、拿不到真实数据。本文件已全部改为数字 id。
+#
+# 【千问 API】LLM 节点 provider=langgenius/tongyi/tongyi，name=deepseek-v4-pro
+#   （你环境里实测可用；要换 qwen-max/qwen-plus 直接改 name）。
+#   导入后确认 LLM 节点模型框已选中、不是红色未选择。
+#
+# 【知识库（以后再加）】需要时在“开始”与“LLM诊断”间插 knowledge-retrieval 节点
+#   并选好知识库，再把 LLM 的 context.enabled 改 true 指向它、system 末尾加
+#   "可参考资料：{{#context#}}"。该节点必须选中知识库，否则无法发布。
+# ===================================================================
+app:
+  description: 输入一条已由规则引擎判定的采购异常，输出诊断结论、根因、对策、提醒对象与置信度（严格 JSON）。
+  icon: 🔍
+  icon_background: '#FEF3C7'
+  mode: workflow
+  name: 采购诊断工作流
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.6.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+      - data:
+          isInIteration: false
+          isInLoop: false
+          sourceType: start
+          targetType: llm
+        id: edge-start-llm
+        source: '1750000000001'
+        sourceHandle: source
+        target: '1750000000002'
+        targetHandle: target
+        type: custom
+        zIndex: 0
+
+      - data:
+          isInIteration: false
+          isInLoop: false
+          sourceType: llm
+          targetType: code
+        id: edge-llm-code
+        source: '1750000000002'
+        sourceHandle: source
+        target: '1750000000003'
+        targetHandle: target
+        type: custom
+        zIndex: 0
+
+      - data:
+          isInIteration: false
+          isInLoop: false
+          sourceType: code
+          targetType: end
+        id: edge-code-end
+        source: '1750000000003'
+        sourceHandle: source
+        target: '1750000000004'
+        targetHandle: target
+        type: custom
+        zIndex: 0
+
+    nodes:
+      - data:
+          desc: 一条异常的 JSON 字符串（结构见 contracts.schema.json#AnomalyInput）
+          selected: false
+          title: 开始
+          type: start
+          variables:
+            - label: 异常JSON
+              max_length: 48000
+              options: []
+              required: true
+              type: paragraph
+              variable: anomaly_json
+        height: 116
+        id: '1750000000001'
+        position:
+          x: 80
+          y: 282
+        positionAbsolute:
+          x: 80
+          y: 282
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+
+      - data:
+          context:
+            enabled: false
+            variable_selector: []
+          desc: 诊断（temperature 0.2，求稳；严格输出 JSON）
+          model:
+            completion_params:
+              temperature: 0.2
+            mode: chat
+            name: deepseek-v4-pro
+            provider: langgenius/tongyi/tongyi
+          prompt_template:
+            - id: sys-diag-001
+              role: system
+              text: |
+                你是资深采购成本与供应链风控顾问，服务于一家线缆/连接器/PCB 制造企业的管理层。
+
+                你会收到一条已由规则引擎判定完成的采购异常，格式为 JSON，包含各项已算好的指标、命中的规则和已定的风险等级。
+
+                铁律：
+                1. 绝不重新计算或编造输入里没有的数字；只能引用输入中已有的数值。
+                2. 风险等级 risk_level 已由规则引擎判定，你不得修改，只能围绕它做诊断。
+                3. 语气是经营顾问，简洁、直给、面向不懂技术的管理层。
+                4. 必须严格输出 JSON，不要任何 markdown 围栏、不要任何解释性前后缀。
+
+                输出 JSON 结构（严格遵守字段名）：
+                {
+                  "conclusion": "结论先行的一句话，引用关键数字（如环比+14%、材料-4%、背离18点）",
+                  "attribution": "根因分析：为什么会异常，指向供应商行为/市场/内部",
+                  "suggestions": ["2到4条具体可执行的对策"],
+                  "notify": ["从 采购部负责人/分管副总/供应链风控/财务 中选出该提醒谁"],
+                  "confidence": 0.0到1.0之间的数字（命中规则越多、背离越大，confidence 越高）
+                }
+            - id: user-diag-001
+              role: user
+              text: |
+                待诊断的采购异常：
+                {{#1750000000001.anomaly_json#}}
+          selected: false
+          title: LLM 诊断
+          type: llm
+          variables: []
+          vision:
+            enabled: false
+        height: 98
+        id: '1750000000002'
+        position:
+          x: 384
+          y: 282
+        positionAbsolute:
+          x: 384
+          y: 282
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+
+      - data:
+          code: |
+            import json
+
+            def main(llm_text: str) -> dict:
+                t = (llm_text or "").strip()
+                # 去除可能的 markdown 围栏，截取首尾花括号之间的内容
+                if t.startswith("```"):
+                    t = t.strip("`")
+                if "{" in t and "}" in t:
+                    t = t[t.find("{"):t.rfind("}") + 1]
+                try:
+                    data = json.loads(t)
+                except (json.JSONDecodeError, ValueError):
+                    data = {}
+                suggestions = data.get("suggestions", [])
+                notify = data.get("notify", [])
+                if not isinstance(suggestions, list):
+                    suggestions = []
+                if not isinstance(notify, list):
+                    notify = []
+                try:
+                    confidence = float(data.get("confidence", 0.7))
+                except (TypeError, ValueError):
+                    confidence = 0.7
+                return {
+                    "conclusion": str(data.get("conclusion", "")),
+                    "attribution": str(data.get("attribution", "")),
+                    "suggestions": suggestions,
+                    "notify": notify,
+                    "confidence": confidence,
+                }
+          code_language: python3
+          desc: 解析 LLM 输出为严格字段（解析失败时给安全默认值，不抛异常）
+          outputs:
+            attribution:
+              children: null
+              type: string
+            conclusion:
+              children: null
+              type: string
+            confidence:
+              children: null
+              type: number
+            notify:
+              children: null
+              type: array[string]
+            suggestions:
+              children: null
+              type: array[string]
+          selected: false
+          title: 解析JSON
+          type: code
+          variables:
+            - value_selector:
+                - '1750000000002'
+                - text
+              variable: llm_text
+        height: 54
+        id: '1750000000003'
+        position:
+          x: 688
+          y: 282
+        positionAbsolute:
+          x: 688
+          y: 282
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+
+      - data:
+          desc: 输出 DiagnosisOutput（contracts.schema.json#DiagnosisOutput）
+          outputs:
+            - value_selector:
+                - '1750000000003'
+                - conclusion
+              value_type: string
+              variable: conclusion
+            - value_selector:
+                - '1750000000003'
+                - attribution
+              value_type: string
+              variable: attribution
+            - value_selector:
+                - '1750000000003'
+                - suggestions
+              value_type: array[string]
+              variable: suggestions
+            - value_selector:
+                - '1750000000003'
+                - notify
+              value_type: array[string]
+              variable: notify
+            - value_selector:
+                - '1750000000003'
+                - confidence
+              value_type: number
+              variable: confidence
+          selected: false
+          title: 结束
+          type: end
+        height: 180
+        id: '1750000000004'
+        position:
+          x: 992
+          y: 282
+        positionAbsolute:
+          x: 992
+          y: 282
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.8
