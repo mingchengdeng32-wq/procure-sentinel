@@ -38,3 +38,25 @@ export function peerDeviation(price, peerAvg) {
 export function concentration(shares) {
   return Math.max(...shares);
 }
+
+// 皮尔逊相关系数（-1~1）；两序列按尾部对齐，长度<2 或任一方差为 0 返回 0
+export function correlation(xs, ys) {
+  const n = Math.min(xs.length, ys.length);
+  if (n < 2) return 0;
+  const x = xs.slice(-n);
+  const y = ys.slice(-n);
+  const mx = mean(x);
+  const my = mean(y);
+  let cov = 0;
+  let vx = 0;
+  let vy = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = x[i] - mx;
+    const dy = y[i] - my;
+    cov += dx * dy;
+    vx += dx * dx;
+    vy += dy * dy;
+  }
+  if (vx === 0 || vy === 0) return 0;
+  return cov / Math.sqrt(vx * vy);
+}
