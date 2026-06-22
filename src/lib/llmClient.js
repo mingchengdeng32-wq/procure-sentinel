@@ -31,6 +31,10 @@ export function createLlmClient(insights) {
     isAiGenerated() {
       return insights._aiGenerated === true;
     },
+    // App2 经营洞察是否由真 AI 生成，用于 ④ 区域 ✨ 标识（回退兜底时为 false）
+    insightsAiGenerated() {
+      return insights._app2Generated === true;
+    },
     aiModel() {
       return insights._model ?? "";
     }

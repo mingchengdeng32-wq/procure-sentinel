@@ -6,8 +6,11 @@ const PRESETS = [
 
 export function renderInsights(el, ctx) {
   const actions = ctx.llm.getExecActions();
+  const aiBadge = ctx.llm.insightsAiGenerated?.()
+    ? `<span class="text-xs px-2 py-0.5 rounded ml-2" style="background:var(--accent)22;color:var(--accent-glow)">✨AI洞察</span>`
+    : "";
   el.innerHTML = `
-    <h2 class="big-num text-lg mb-4" style="color:var(--text-1)">④ 一键智能洞察</h2>
+    <h2 class="big-num text-lg mb-4" style="color:var(--text-1)">④ 一键智能洞察${aiBadge}</h2>
     <div class="grid md:grid-cols-2 gap-4">
       <div class="card p-5">
         <div class="text-sm mb-3" style="color:var(--text-1)">点击问题，获取战略洞察：</div>
