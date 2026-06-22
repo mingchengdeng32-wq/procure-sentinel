@@ -1,0 +1,269 @@
+# ===================================================================
+# App2 · 经营洞察工作流（Workflow）
+# 规格来源：dify-integration-spec.md §4 / 契约：contracts.schema.json#InsightSummaryInput / #InsightSummaryOutput
+# -------------------------------------------------------------------
+# 链路：开始 → LLM洞察 → 解析JSON → 结束（最小链路，无知识库）
+# 用途：输入本期全盘异常 + 各产品线汇总，输出 3 个预设问答 + 3 条管理层行动建议。
+#
+# 【重要】节点 id 必须是“纯数字字符串”，不能含连字符 '-'。
+#   Dify 的 prompt 变量替换正则不认 id 里的 '-'，否则 {{#id.var#}} 不会被替换。
+#   本文件节点 id 用 1750000001xxx 系列，与 App1（1750000000xxx）区分。
+#
+# 【千问 API】LLM 节点 provider=langgenius/tongyi/tongyi，name=deepseek-v4-pro
+#   导入后确认 LLM 节点模型框已选中、不是红色未选择。
+# ===================================================================
+app:
+  description: 输入本期全盘采购异常与各产品线汇总，输出经营级洞察（最大风险/成本压力/降本机会）与 3 条管理层行动建议（严格 JSON）。
+  icon: 📊
+  icon_background: '#DBEAFE'
+  mode: workflow
+  name: 经营洞察工作流
+  use_icon_as_answer_icon: false
+dependencies: []
+kind: app
+version: 0.6.0
+workflow:
+  conversation_variables: []
+  environment_variables: []
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    edges:
+      - data:
+          isInIteration: false
+          isInLoop: false
+          sourceType: start
+          targetType: llm
+        id: edge-start-llm
+        source: '1750000001001'
+        sourceHandle: source
+        target: '1750000001002'
+        targetHandle: target
+        type: custom
+        zIndex: 0
+
+      - data:
+          isInIteration: false
+          isInLoop: false
+          sourceType: llm
+          targetType: code
+        id: edge-llm-code
+        source: '1750000001002'
+        sourceHandle: source
+        target: '1750000001003'
+        targetHandle: target
+        type: custom
+        zIndex: 0
+
+      - data:
+          isInIteration: false
+          isInLoop: false
+          sourceType: code
+          targetType: end
+        id: edge-code-end
+        source: '1750000001003'
+        sourceHandle: source
+        target: '1750000001004'
+        targetHandle: target
+        type: custom
+        zIndex: 0
+
+    nodes:
+      - data:
+          desc: 本期全盘异常 + 各产品线汇总的 JSON 字符串（结构见 contracts.schema.json#InsightSummaryInput）
+          selected: false
+          title: 开始
+          type: start
+          variables:
+            - label: 汇总JSON
+              max_length: 48000
+              options: []
+              required: true
+              type: paragraph
+              variable: summary_json
+        height: 116
+        id: '1750000001001'
+        position:
+          x: 80
+          y: 282
+        positionAbsolute:
+          x: 80
+          y: 282
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+
+      - data:
+          context:
+            enabled: false
+            variable_selector: []
+          desc: 经营洞察（temperature 0.3；严格输出 JSON）
+          model:
+            completion_params:
+              temperature: 0.3
+            mode: chat
+            name: deepseek-v4-pro
+            provider: langgenius/tongyi/tongyi
+          prompt_template:
+            - id: sys-insight-001
+              role: system
+              text: |
+                你是采购经营分析顾问，面向不懂技术的公司管理层。
+
+                你会收到本期全部采购异常和各产品线汇总（已由规则引擎算好）。基于这些事实，输出经营级洞察与行动建议。
+
+                铁律：
+                1. 不重算、不编造输入外的数字。
+                2. 结论先行，每段不超过200字，面向决策。
+                3. 严格输出 JSON，无 markdown 围栏，无多余文字。
+
+                输出 JSON 结构（严格遵守字段名）：
+                {
+                  "biggestRisk": "本季度最大风险（结论先行，点名产品线/供应商）",
+                  "costPressure": "哪条产品线成本压力最大，区分'材料涨'与'议价问题'",
+                  "savingOpp": "有哪些降本机会，给方向和量级",
+                  "execActions": ["恰好3条给管理层的行动建议，每条含 动作+理由+预期收益"]
+                }
+            - id: user-insight-001
+              role: user
+              text: |
+                本期采购汇总：
+                {{#1750000001001.summary_json#}}
+          selected: false
+          title: LLM 洞察
+          type: llm
+          variables: []
+          vision:
+            enabled: false
+        height: 98
+        id: '1750000001002'
+        position:
+          x: 384
+          y: 282
+        positionAbsolute:
+          x: 384
+          y: 282
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+
+      - data:
+          code: |
+            import json
+
+            def main(llm_text: str) -> dict:
+                t = (llm_text or "").strip()
+                # 去除可能的 markdown 围栏，截取首尾花括号之间的内容
+                if t.startswith("```"):
+                    t = t.strip("`")
+                if "{" in t and "}" in t:
+                    t = t[t.find("{"):t.rfind("}") + 1]
+                try:
+                    data = json.loads(t)
+                except (json.JSONDecodeError, ValueError):
+                    data = {}
+                exec_actions = data.get("execActions", [])
+                if not isinstance(exec_actions, list):
+                    exec_actions = []
+                return {
+                    "biggestRisk": str(data.get("biggestRisk", "")),
+                    "costPressure": str(data.get("costPressure", "")),
+                    "savingOpp": str(data.get("savingOpp", "")),
+                    "execActions": exec_actions,
+                }
+          code_language: python3
+          desc: 解析 LLM 输出为严格字段（解析失败时给安全默认值，不抛异常）
+          outputs:
+            biggestRisk:
+              children: null
+              type: string
+            costPressure:
+              children: null
+              type: string
+            savingOpp:
+              children: null
+              type: string
+            execActions:
+              children: null
+              type: array[string]
+          selected: false
+          title: 解析JSON
+          type: code
+          variables:
+            - value_selector:
+                - '1750000001002'
+                - text
+              variable: llm_text
+        height: 54
+        id: '1750000001003'
+        position:
+          x: 688
+          y: 282
+        positionAbsolute:
+          x: 688
+          y: 282
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+
+      - data:
+          desc: 输出 InsightSummaryOutput（contracts.schema.json#InsightSummaryOutput）
+          outputs:
+            - value_selector:
+                - '1750000001003'
+                - biggestRisk
+              value_type: string
+              variable: biggestRisk
+            - value_selector:
+                - '1750000001003'
+                - costPressure
+              value_type: string
+              variable: costPressure
+            - value_selector:
+                - '1750000001003'
+                - savingOpp
+              value_type: string
+              variable: savingOpp
+            - value_selector:
+                - '1750000001003'
+                - execActions
+              value_type: array[string]
+              variable: execActions
+          selected: false
+          title: 结束
+          type: end
+        height: 160
+        id: '1750000001004'
+        position:
+          x: 992
+          y: 282
+        positionAbsolute:
+          x: 992
+          y: 282
+        sourcePosition: right
+        targetPosition: left
+        type: custom
+        width: 244
+
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.8
