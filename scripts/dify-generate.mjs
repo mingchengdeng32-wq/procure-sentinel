@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { detectAnomalies, DEFAULT_CONFIG } from "../src/lib/ruleEngine.js";
 import { pctChange, peerDeviation, correlation } from "../src/lib/stats.js";
 
-const BASE = process.env.DIFY_BASE_URL; // 已含 /v1，例 http://10.0.1.48/v1
+const BASE = process.env.DIFY_BASE_URL; // 已含 /v1，例 http://your-dify-host/v1
 const APP1 = process.env.DIFY_APP1_KEY;
 const APP2 = process.env.DIFY_APP2_KEY;
 const APP3 = process.env.DIFY_APP3_KEY;
