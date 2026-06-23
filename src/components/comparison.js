@@ -1,5 +1,6 @@
 import { signedPct } from "../lib/format.js";
 import { pctChange } from "../lib/stats.js";
+import { initChart } from "../lib/chart.js";
 
 // 生成一句结论：采购价 vs 同行
 function verdict(ctx, rec) {
@@ -38,7 +39,7 @@ export function renderComparison(el, ctx) {
 
   const base = { backgroundColor: "transparent", textStyle: { color: "#9aa7c0" }, legend: { textStyle: { color: "#9aa7c0" } }, grid: { left: 40, right: 20, top: 30, bottom: 30 } };
 
-  echarts.init(document.getElementById("chart-h"), "dark").setOption({
+  initChart(document.getElementById("chart-h"), {
     ...base, tooltip: { trigger: "axis" },
     xAxis: { type: "category", data: periods },
     yAxis: { type: "value", scale: true },
@@ -49,7 +50,7 @@ export function renderComparison(el, ctx) {
     ]
   });
 
-  echarts.init(document.getElementById("chart-v"), "dark").setOption({
+  initChart(document.getElementById("chart-v"), {
     ...base, tooltip: { trigger: "axis" },
     xAxis: { type: "category", data: periods },
     yAxis: [{ type: "value", scale: true }, { type: "value", scale: true }],

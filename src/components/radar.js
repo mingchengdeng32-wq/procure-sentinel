@@ -1,6 +1,7 @@
 import { assessQuote, DEFAULT_MODEL } from "../lib/priceModel.js";
 import { pctChange } from "../lib/stats.js";
 import { signedPct } from "../lib/format.js";
+import { initChart } from "../lib/chart.js";
 
 // 用材料环比 + 基准价评估当前产品线报价是否偏高
 function assessCurrent(ctx) {
@@ -73,11 +74,7 @@ export function renderRadar(el, ctx) {
     ${corrHtml}` : ""}`;
 
   if (a) {
-    const bandEl = document.getElementById("radar-band");
-    const existing = echarts.getInstanceByDom(bandEl);
-    if (existing) existing.dispose();
-    const chart = echarts.init(bandEl, "dark");
-    chart.setOption({
+    initChart(document.getElementById("radar-band"), {
       backgroundColor: "transparent",
       tooltip: { trigger: "axis" },
       grid: { left: 40, right: 20, top: 20, bottom: 30 },

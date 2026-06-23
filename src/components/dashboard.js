@@ -1,4 +1,5 @@
 import { wan, signedPct } from "../lib/format.js";
+import { initChart } from "../lib/chart.js";
 
 // 计算本产品线的汇总指标
 function summarize(ctx) {
@@ -37,8 +38,7 @@ export function renderDashboard(el, ctx) {
     </div>
     <div id="health-gauge" class="card mt-4" style="height:220px"></div>`;
 
-  const chart = echarts.init(document.getElementById("health-gauge"), "dark");
-  chart.setOption({
+  initChart(document.getElementById("health-gauge"), {
     backgroundColor: "transparent",
     series: [{
       type: "gauge", min: 0, max: 100,
