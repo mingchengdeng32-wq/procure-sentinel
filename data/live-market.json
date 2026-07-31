@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-30",
+  "updatedAt": "2026-07-31",
   "sources": [
     {
       "id": "copper",
@@ -10,7 +10,7 @@
     {
       "id": "aluminum",
       "name": "沪铝",
-      "price": 23625,
+      "price": 23640,
       "real": true
     }
   ]
